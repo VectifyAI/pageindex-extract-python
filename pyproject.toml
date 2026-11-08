@@ -1,0 +1,33 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "pageindex-extract"
+dynamic = ["version"]
+description = "Python client for Page Extract API by PageIndex: turn a PDF into JSON that fits your schema."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.9"
+authors = [{ name = "PageIndex", email = "support@pageindex.ai" }]
+dependencies = ["httpx>=0.24", "pageindex-search>=0.14"]
+keywords = ["pageindex", "extract", "extraction", "pdf", "json-schema", "llm", "structured-output"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
+  "Intended Audience :: Developers",
+  "Topic :: Software Development :: Libraries",
+]
+
+[project.urls]
+Homepage = "https://extract.pageindex.ai"
+Documentation = "https://extract.pageindex.ai/docs"
+Repository = "https://github.com/VectifyAI/pageindex-extract-python"
+Issues = "https://github.com/VectifyAI/pageindex-extract-python/issues"
+
+[tool.hatch.version]
+path = "src/pageindex_extract/_version.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pageindex_extract"]
