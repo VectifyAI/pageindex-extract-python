@@ -184,5 +184,17 @@ def test_cancel_and_delete():
 
 def test_no_key_raises(monkeypatch):
     monkeypatch.delenv("PAGEINDEX_SEARCH_API_KEY", raising=False)
+    monkeypatch.delenv("PAGEINDEX_EXTRACT_API_KEY", raising=False)
     with pytest.raises(PageExtractError):
         PageExtract()
+
+
+@pytest.mark.parametrize("names", [("PAGEINDEX_EXTRACT_API_KEY",), ("PAGEINDEX_SEARCH_API_KEY",),
+                                   ("PAGEINDEX_EXTRACT_API_KEY", "PAGEINDEX_SEARCH_API_KEY")])
+def test_key_from_either_variable(monkeypatch, names):
+    for k in ("PAGEINDEX_SEARCH_API_KEY", "PAGEINDEX_EXTRACT_API_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    for k in names:
+        monkeypatch.setenv(k, f"pis_live_{k}")
+    client = PageExtract()
+    assert client._headers["Authorization"] == f"Bearer pis_live_{names[0]}"   # Page Extract's own name first

@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "pageindex-extract"
 dynamic = ["version"]
-description = "Python client for Page Extract API by PageIndex: turn a PDF into JSON that fits your schema."
+description = "Python client for Page Extract API by PageIndex: extract the data you need out of any PDF."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICENSE"]

@@ -14,7 +14,8 @@ from pageindex_search import Document, PageSearch
 from ._version import __version__
 
 DEFAULT_BASE_URL = "https://api.extract.pageindex.ai/v1"
-API_KEY_ENV = "PAGEINDEX_SEARCH_API_KEY"  # one key for Page Search and Page Extract
+# Where the key is read from, in order: Page Extract's own name, then Page Search's (one key serves both).
+API_KEY_ENVS = ("PAGEINDEX_EXTRACT_API_KEY", "PAGEINDEX_SEARCH_API_KEY")
 # Retried, after a short wait that doubles: the server was busy or briefly unreachable.
 RETRY_STATUSES = {429, 500, 502, 503, 504}
 # Starting an extraction is retried only when the request surely did not start one: it was turned away before it
@@ -198,7 +199,7 @@ class Jobs:
 class PageExtract:
     """A client for the Page Extract API.
 
-        client = PageExtract()  # reads PAGEINDEX_SEARCH_API_KEY: the same key as Page Search
+        client = PageExtract()  # reads PAGEINDEX_EXTRACT_API_KEY (or PAGEINDEX_SEARCH_API_KEY: the same key)
         job = client.extract("invoice.pdf", schema)  # a JSON Schema, or a Pydantic model
         print(job.result)
 
@@ -207,10 +208,10 @@ class PageExtract:
 
     def __init__(self, api_key: str | None = None, *, base_url: str | None = None, timeout: float = 120.0,
                  max_retries: int = 2, http_client: httpx.Client | None = None, search: PageSearch | None = None):
-        api_key = api_key or os.environ.get(API_KEY_ENV)
+        api_key = api_key or next((os.environ[k] for k in API_KEY_ENVS if os.environ.get(k)), None)
         if not api_key:
-            raise PageExtractError(f"No API key: pass api_key or set {API_KEY_ENV}. "
-                                   "Create one at https://search.pageindex.ai/console/keys.")
+            raise PageExtractError(f"No API key: pass api_key or set {API_KEY_ENVS[0]}. "
+                                   "Create one at https://search.pageindex.ai/console/keys?for=extract.")
         self.base_url = (base_url or os.environ.get("PAGEINDEX_EXTRACT_BASE_URL") or DEFAULT_BASE_URL).rstrip("/")
         self.max_retries = max_retries
         self._http = http_client or httpx.Client(timeout=timeout)

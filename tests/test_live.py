@@ -1,4 +1,4 @@
-"""Against the real API, when PAGEINDEX_SEARCH_API_KEY and PAGE_EXTRACT_LIVE_PDF are set: one page, standard tier
+"""Against the real API, when PAGEINDEX_EXTRACT_API_KEY (or PAGEINDEX_SEARCH_API_KEY) and PAGE_EXTRACT_LIVE_PDF are set: one page, standard tier
 (about $0.03). The PDF is uploaded (or found, if uploaded before) and left in place."""
 import os
 
@@ -7,8 +7,8 @@ import pytest
 from pageindex_extract import PageExtract, PageExtractError
 
 PDF = os.environ.get("PAGE_EXTRACT_LIVE_PDF")
-pytestmark = pytest.mark.skipif(not (PDF and os.environ.get("PAGEINDEX_SEARCH_API_KEY")),
-                                reason="set PAGEINDEX_SEARCH_API_KEY and PAGE_EXTRACT_LIVE_PDF")
+KEY = os.environ.get("PAGEINDEX_EXTRACT_API_KEY") or os.environ.get("PAGEINDEX_SEARCH_API_KEY")
+pytestmark = pytest.mark.skipif(not (PDF and KEY), reason="set PAGEINDEX_EXTRACT_API_KEY and PAGE_EXTRACT_LIVE_PDF")
 
 SCHEMA = {"type": "object", "properties": {
     "title": {"type": ["string", "null"], "description": "The document's title, as printed on its first page"},

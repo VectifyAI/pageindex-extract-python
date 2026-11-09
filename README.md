@@ -1,16 +1,18 @@
 # Page Extract Python SDK
 
-Python client for [Page Extract](https://extract.pageindex.ai) by PageIndex: turn a PDF into JSON that fits your schema.
+Python client for [Page Extract](https://extract.pageindex.ai) by PageIndex: extract the data you need out of any PDF.
 
 ```bash
 pip install pageindex-extract
 ```
 
-Create an API key in the [console](https://search.pageindex.ai/console/keys). Page Extract and Page Search share one key, one credit balance and one set of documents.
+Create an API key in the [console](https://search.pageindex.ai/console/keys?for=extract). Page Extract and Page Search share one key, one credit balance and one set of documents.
 
 ```bash
-export PAGEINDEX_SEARCH_API_KEY=pis_live_...
+export PAGEINDEX_EXTRACT_API_KEY=pis_live_...
 ```
+
+The client reads `PAGEINDEX_EXTRACT_API_KEY`, or `PAGEINDEX_SEARCH_API_KEY` if you already keep the key there.
 
 ## Extract
 
