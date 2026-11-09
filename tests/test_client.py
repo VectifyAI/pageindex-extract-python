@@ -110,15 +110,40 @@ def test_file_is_uploaded_then_extracted(tmp_path):
     pdf = tmp_path / "invoice.pdf"
     pdf.write_bytes(b"%PDF-1.4")
 
+    seen = []
+
     def search(request):
+        seen.append((request.method, request.url.path))
+        if request.url.path == "/v1/collections" and request.method == "GET":
+            return httpx.Response(200, json={"data": [], "has_more": False, "total": 0})
+        if request.url.path == "/v1/collections":
+            assert json.loads(request.content)["name"] == "Page Extract"
+            return httpx.Response(200, json={"id": "col_9", "name": "Page Extract", "documents": 0})
         assert request.method == "POST" and request.url.path == "/v1/documents"
+        assert b'name="collection_id"' in request.content and b"col_9" in request.content
         return httpx.Response(200, json={"id": "doc_7", "status": "ready", "filename": "invoice.pdf", "pages": 2})
 
     def extract(request):
         assert json.loads(request.content)["document"] == "doc_7"
         return httpx.Response(200, json=job())
 
-    assert client(extract, search).extract(str(pdf), SCHEMA, wait=False).id == "ext_1"
+    c = client(extract, search)
+    assert c.extract(str(pdf), SCHEMA, wait=False).id == "ext_1"
+    assert seen == [("GET", "/v1/collections"), ("POST", "/v1/collections"), ("POST", "/v1/documents")]
+    c.extract(str(pdf), SCHEMA, wait=False)  # the collection is found once a client
+    assert seen.count(("GET", "/v1/collections")) == 1
+
+
+def test_file_to_no_collection(tmp_path):
+    pdf = tmp_path / "a.pdf"
+    pdf.write_bytes(b"%PDF-1.4")
+
+    def search(request):
+        assert request.url.path == "/v1/documents" and b"collection_id" not in request.content
+        return httpx.Response(200, json={"id": "doc_8", "status": "ready"})
+
+    assert client(lambda r: httpx.Response(200, json=job()), search).extract(str(pdf), SCHEMA, wait=False,
+                                                                            collection=None).id == "ext_1"
 
 
 def test_missing_file_raises(tmp_path):

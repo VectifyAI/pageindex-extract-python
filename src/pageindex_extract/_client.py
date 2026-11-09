@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, BinaryIO, Iterator, Union
 
 import httpx
-from pageindex_search import Document, PageSearch
+from pageindex_search import Collection, Document, PageSearch
 
 from ._version import __version__
 
@@ -22,6 +22,9 @@ RETRY_STATUSES = {429, 500, 502, 503, 504}
 # reached the service, so a retry cannot run (or charge) the same extraction twice.
 CREATE_RETRY_STATUSES = {429, 502, 503}
 FINISHED = ("COMPLETED", "FAILED", "CANCELLED")
+# The collection a file uploaded to extract from goes in (made on first use), as the console does: they stand apart from
+# the documents uploaded to search.
+COLLECTION = "Page Extract"
 
 FileInput = Union[str, os.PathLike, bytes, BinaryIO]
 DocumentInput = Union[FileInput, Document]
@@ -219,21 +222,24 @@ class PageExtract:
         self.search = search or PageSearch(api_key, timeout=timeout, max_retries=max_retries)
         self.documents = self.search.documents
         self.jobs = Jobs(self)
+        self._collections: dict[str, Collection] = {}  # by name, as found or made
 
     def extract(self, document: DocumentInput, schema: Any, *, tier: str = "standard",
                 pages: str | int | tuple[int, int] | None = None, cite_sources: bool = False,
-                system_prompt: str | None = None, wait: bool = True, timeout: float = 3600.0) -> ExtractJob:
+                system_prompt: str | None = None, wait: bool = True, timeout: float = 3600.0,
+                collection: Collection | str | None = COLLECTION) -> ExtractJob:
         """Extract JSON that fits schema (a JSON Schema, or a Pydantic model) from a PDF.
 
-        document is a file (a path, bytes or an open binary file), uploaded first (a file uploaded before is not
-        uploaded again), or an uploaded document or its id ("doc_..."). tier is "standard" or "pro"; pages keeps
+        document is a file (a path, bytes or an open binary file), uploaded first to collection (the "Page Extract"
+        collection by default, made on first use; a collection's name or id, or None for none; a file uploaded to it
+        before is not uploaded again), or an uploaded document or its id ("doc_..."). tier is "standard" or "pro"; pages keeps
         the extraction to some pages ("3-9", (3, 9) or 3), and only they are charged; cite_sources gives the page
         each list item is on (job.sources); system_prompt adds your own instructions.
 
         With wait (the default), returns the job once COMPLETED (job.result), or raises PageExtractError if it
         failed; without it, returns the job at once, PENDING: client.jobs.wait(job) for its result.
         """
-        doc = self._document(document)
+        doc = self._document(document, collection)
         for _ in range(60):  # a document just uploaded elsewhere may still be processing
             try:
                 job = self.jobs.create(doc, schema, tier=tier, pages=pages, cite_sources=cite_sources,
@@ -247,15 +253,24 @@ class PageExtract:
             raise PageExtractError(f"Document {_id(doc)} is not ready.", code="document_not_ready")
         return self.jobs.wait(job, timeout=timeout) if wait else job
 
-    def _document(self, document: DocumentInput) -> Document | str:
-        """An uploaded document, or an id: a file is uploaded (and waited for)."""
+    def _document(self, document: DocumentInput, collection: Collection | str | None = COLLECTION) -> Document | str:
+        """An uploaded document, or an id: a file is uploaded (and waited for), to the collection."""
         if isinstance(document, Document):
             return document
         if isinstance(document, str) and not os.path.exists(document) and not document.lower().endswith(".pdf"):
             return document  # an id
         if isinstance(document, (str, os.PathLike)) and not Path(document).exists():
             raise FileNotFoundError(str(document))
-        return self.documents.upload(document)
+        return self.documents.upload(document, collection=self._collection(collection))
+
+    def _collection(self, collection: Collection | str | None) -> Collection | str | None:
+        """A collection, by its id or its name (made if there is none of that name), or None."""
+        if collection is None or isinstance(collection, Collection) or collection.startswith("col_"):
+            return collection
+        if collection not in self._collections:
+            found = next((c for c in self.search.collections.list(limit=100) if c.name == collection), None)
+            self._collections[collection] = found or self.search.collections.create(collection)
+        return self._collections[collection]
 
     # Plumbing
 

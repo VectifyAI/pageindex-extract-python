@@ -74,7 +74,7 @@ job = client.extract(
 print(job.usage.pages, job.usage.credits)
 ```
 
-`document` can be a path, bytes, an open binary file, an uploaded document, or a document id (`"doc_..."`).
+`document` can be a path, bytes, an open binary file, an uploaded document, or a document id (`"doc_..."`). A file is uploaded to the **Page Extract** collection (made on first use), where it is kept apart from documents you upload to search; pass `collection="..."` (a name or an id) for another, or `collection=None` for none. A file already in that collection is not uploaded again.
 
 You pay only for extractions that complete. A failed extraction raises `PageExtractError` (its `job` holds the job) and costs nothing.
 
